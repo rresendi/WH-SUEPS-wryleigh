@@ -28,6 +28,20 @@ elif "hadronic" in sample_name:
 else:
     decay_type="leptonic"
 
+# conditions for what year
+if "UL18" in sample_name:
+    year="2018 conditions"
+    folder = "muon_eff_outputs_2018/"
+elif "UL17" in sample_name:
+    year = "2017 conditions"
+    folder = "muon_eff_outputs_2017/"
+elif "UL16APV" in sample_name:
+    year = "2016 APV conditions"
+    folder = "muon_eff_outputs_2016APV/"
+else:
+    year = "2016 conditions"
+    folder = "muon_eff_outputs_2016/"
+
 # dark meson (phi) mass
 if "MD2.00" in sample_name:
     md = "2.00 [GeV]"
