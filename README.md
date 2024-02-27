@@ -16,3 +16,11 @@ $ ssh lxplus723.cern.ch
  ```
 $ sh setup.sh
 ```
+
+
+To run the efficiency scripts: 
+```
+$python MC_muon_efficiency.py --input "signal_sample_file_name"
+```
+for example, if I am running it on /eos/user/j/jreicher/SUEP/WH_private_signals/merged/WHleptonicpythia_hadronic_M125.0_MD4.00_T1.00_HT-1_UL16APV_NANOAOD.root, I would type 
+```--input "WHleptonicpythia_hadronic_M125.0_MD4.00_T1.00_HT-1_UL16APV_NANOAOD"```
