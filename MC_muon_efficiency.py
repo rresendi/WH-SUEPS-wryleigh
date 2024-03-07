@@ -1,3 +1,5 @@
+
+# to run: $ python2 MC_muon_efficiency.py --input "name_of_sample_file"
 import os
 import argparse
 import uproot
@@ -29,18 +31,18 @@ else:
 # conditions for what year
 if "UL18" in sample_name:
     year="2018 conditions"
-    folder = "muon_eff_outputs_2018/"
+    folder = "MC_eff_outputs_2018/"
 elif "UL17" in sample_name:
     year = "2017 conditions"
-    folder = "muon_eff_outputs_2017/"
+    folder = "MC_eff_outputs_2017/"
 elif "UL16APV" in sample_name:
     year = "2016 APV conditions"
-    folder = "muon_eff_outputs_2016APV/"
+    folder = "MC_eff_outputs_2016APV/"
 else:
     year = "2016 conditions"
-    folder = "muon_eff_outputs_2016/"
+    folder = "MC_eff_outputs_2016/"
 
-# dark meson (phi) mass    
+# dark meson (phi) mass
 if "MD2.00" in sample_name:
     md = "2.00 [GeV]"
 elif "MD4.00" in sample_name:
@@ -85,19 +87,7 @@ else:
 
 # Gets relevant variables from file
 def Events(f):
-    if year != "2018 conditions":
-        evs=f['Events'].arrays([
-                'HLT_IsoMu24',
-                'HLT_Mu50',
-                'Muon_pt',
-                'Muon_eta',
-                'Muon_dz',
-                'Muon_dxy',
-                'Muon_pfRelIso03_all',
-                'Muon_pfRelIso03_chg',
-                'Muon_looseId'])
-    else:
-        evs=f['Events'].arrays(['HLT_IsoMu27',
+    evs=f['Events'].arrays(['HLT_IsoMu27',
                 'HLT_IsoMu24',
                 'HLT_Mu50',
                 'Muon_pt',
@@ -138,27 +128,26 @@ def muon_hists(events,etas,hists):
     eta_max=etas[1]
     # trigger
     triggerSingleMuon = (
-            events.HLT_IsoMu27
-            | events.HLT_IsoMu24
-            | events.HLT_Mu50
+        events["HLT_IsoMu27"]
+        | events["HLT_IsoMu24"]
+        | events["HLT_Mu50"]
         )
     # quality requirements for muons
-    muon_quality_check = (
-                (events.Muon_looseId)
-                & (events.Muon_pt > 10)
-                & (np.abs(events.Muon_eta) < 2.4)
-                & (np.abs(events.Muon_dz) < 0.1)
-                & (np.abs(events.Muon_dxy) < 0.02)
-                & (events.Muon_pfRelIso03_chg < 0.25)
-                & (events.Muon_pfRelIso03_all < 0.25)
+    muon_quality_check = ((events["Muon_looseId"])
+                & (events["Muon_pt"] > 10)
+                & (np.abs(events["Muon_eta"]) < 2.4)
+                & (np.abs(events["Muon_dz"]) < 0.1)
+                & (np.abs(events["Muon_dxy"]) < 0.02)
+                & (events["Muon_pfRelIso03_chg"] < 0.25)
+                & (events["Muon_pfRelIso03_all"] < 0.25)
             )
     # cut on eta
     eta_split=(
-        (np.abs(events.Muon_eta) >= eta_min)
-        & (np.abs(events.Muon_eta) < eta_max )
+        (np.abs(events["Muon_eta"]) >= eta_min)
+        & (np.abs(events["Muon_eta"]) < eta_max )
     )
     # Select based on trigger
-    mu=events.Muon_pt
+    mu=events["Muon_pt"]
     evs=mu[muon_quality_check & eta_split]
     tr_evs=evs[triggerSingleMuon]
 
@@ -169,7 +158,7 @@ def muon_hists(events,etas,hists):
     for ev in tr_evs:
         for entry in ev:
             filthist.Fill(entry)
-    
+
     return 0
 
 with uproot.open(input_file) as f:
@@ -194,9 +183,9 @@ mu_eff.Divide(mu_totalhist)
 
 eta1_effs.SetTitle("Muon Trigger Efficiency in bins of pT;Muon pT [GeV];Efficiency")
 legend=ROOT.TLegend(0.5,0.1,0.9,0.4)
-legend.AddEntry(eta1_effs,"|#eta|<1.0","")
-legend.AddEntry(eta2_effs,"1.0<|#eta|<1.5","")
-legend.AddEntry(eta3_effs,"1.5<|#eta|<2.4","")
+legend.AddEntry(eta1_effs,"|#eta|<1.0","l")
+legend.AddEntry(eta2_effs,"1.0<|#eta|<1.5","l")
+legend.AddEntry(eta3_effs,"1.5<|#eta|<2.4","l")
 legend.AddEntry(ROOT.nullptr, temp+" [GeV], "+year,"")
 legend.AddEntry(ROOT.nullptr,"SUEP decay type: "+decay_type,"")
 legend.AddEntry(ROOT.nullptr,"Dark meson mass = "+ md+ " SUEP mass = 125.0 GeV","")
@@ -218,12 +207,17 @@ c1.SaveAs(folder+sample_name+"_Efficiency.pdf")
 
 
 # Saves overall efficiency
-try:
-    root_file=uproot.update(output_file)
-    root_file[sample_name]=mu_eff
-except FileNotFoundError:
-    root_file=uproot.create(output_file)
-    root_file[sample_name]=mu_eff
+root_file = ROOT.TFile(output_file,"UPDATE")
+root_file.cd()
+
+eff_dir=root_file.Get("Efficiencies")
+if not eff_dir:
+        eff_dir=root_file.mkdir("Efficiencies")
+        eff_dir.cd()
+mu_eff.Write()
+
+root_file.Close()
 
 
 print("sample "+sample_name+" complete")
+
