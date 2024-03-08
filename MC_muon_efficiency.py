@@ -101,13 +101,12 @@ def Events(f):
     return evs
 
 # Defines binning and histograms
-mu_bin_edges=array('d',[0,1,2,3,4,5,6,7,8,9,10,11,12,
-                         13,14,15,16,17,18,19,20,21,22,
-                         23,24,25,26,27,28,29,30,31,32,
-                         33,34,35,36,37,38,40,45,50,55,
-                         60,65,70,75,80,85,90,95,100,110,
-                         120,130,140,150,160,170,180,190,200])
-
+mu_bin_edges=array('d',[0,2,4,6,8,10,12,
+                         14,16,18,20,22,
+                         24,26,28,30,32,
+                         34,36,38,40,50,
+                         60,70,80,90,100,
+                         120,140,160,180,200])
 # Histograms for overall efficiency
 mu_totalhist=ROOT.TH1D("total_events","Total Events",len(mu_bin_edges)-1,mu_bin_edges)
 mu_filthist=ROOT.TH1D("filt_events","Filtered Events",len(mu_bin_edges)-1,mu_bin_edges)
