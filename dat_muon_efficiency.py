@@ -126,7 +126,7 @@ with uproot.open(input_file) as f:
     eta3_mu_num=(muon_hists(evs,[2.1,2.4],year,"3"))[0]
     eta3_mu_denom=(muon_hists(evs,[2.1,2.4],year,"3"))[1]
 
-# Saves overall efficiency
+# Saves Histograms
 root_file = ROOT.TFile(output_file,"RECREATE")
 root_file.cd()
 eta1_mu_num.Write()
@@ -138,7 +138,7 @@ eta3_mu_denom.Write()
 
 root_file.Close()
 
-print("sample complete")
+print("file complete")
 
 
 
