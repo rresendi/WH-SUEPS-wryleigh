@@ -14,7 +14,7 @@ parser.add_argument("--era", help="data era", type=str)
 args = vars(parser.parse_args())
 input_file = "local.root"
 year=args["era"]
-output_file= "ak4out.root"
+output_file= "out.root"
 # Gets relevant variables from file
 def Events(f):
     evs=f['Events'].arrays(['HLT_IsoMu27',
