@@ -96,7 +96,7 @@ def muon_hists(events,etas,year,reg):
             & (np.abs(events["Muon_dxy"]) < 0.02)
             & (events["Muon_pfRelIso03_chg"] < 0.25)
             & (events["Muon_pfRelIso03_all"] < 0.25)
-            & (events["nJet"]==1)
+            
         )
     # cut on eta
     eta_split=(
