@@ -37,9 +37,10 @@ def Events(f):
                 'Flag_ecalBadCalibFilter',
                 'nJet',
                 'HLT_PFMET110_PFMHT110_IDTight',
+                'MET_phi',
+                'Muon_phi',
                 'MET_pt'
                             ])
-
     return evs
 
 # Defines binning and histograms
@@ -49,6 +50,29 @@ mu_bin_edges=array('d',[0,2,4,6,8,10,12,
                          34,36,38,40,50,
                          60,70,80,90,100,
                          120,140,160,180,200])
+
+# Defines W variables for cuts
+def W_kinematics(evs):
+    # px = pt*cos(phi)
+    mu_px= evs["Muon_pt"] * np.cos(evs["Muon_phi"])
+    # px = pt*sin(phi)
+    mu_py= evs["Muon_pt"] * np.sin(evs["Muon_phi"])
+    met_px= evs["MET_pt"] * np.cos(evs["MET_phi"])
+    met_py= evs["MET_pt"] * np.sin(evs["MET_phi"])
+    # normalized delta phi
+    del_phi= np.abs((evs["MET_phi"] % 2*np.pi)-(evs["Muon_phi"] % 2*np.pi))
+    # Transverse mass (squared)
+    W_mt_2 = (2 * np.abs(evs["Muon_pt"])
+              * np.abs(evs["MET_pt"])
+              * (1 - np.cos(del_phi))  # from PDG review on kinematics, eq 38.61
+              )
+    W_mt=np.sqrt(W_mt_2)
+    W_ptx = mu_px + met_px
+    W_pty = mu_py + met_py
+    # pT of W
+    W_pt = np.sqrt(W_ptx**2 + W_pty**2)
+    return W_mt, W_pt
+
 
 
 # Function for filling the histograms
@@ -82,9 +106,6 @@ def muon_hists(events,etas,year,reg):
             & (np.abs(events["Muon_dxy"]) < 0.02)
             & (events["Muon_pfRelIso03_chg"] < 0.25)
             & (events["Muon_pfRelIso03_all"] < 0.25)
-            & (events["nJet"]>0)
-            & (events["HLT_PFMET110_PFMHT110_IDTight"])
-            & (events['MET_pt'] > 30)
         )
     else:
         muon_quality_check = (
@@ -103,19 +124,27 @@ def muon_hists(events,etas,year,reg):
             & (np.abs(events["Muon_dxy"]) < 0.02)
             & (events["Muon_pfRelIso03_chg"] < 0.25)
             & (events["Muon_pfRelIso03_all"] < 0.25)
-            & (events["HLT_PFMET110_PFMHT110_IDTight"])
-            & (events['MET_pt'] > 30)
-            & (events["nJet"]>0)
         )
     # cut on eta
     eta_split=(
         (np.abs(events["Muon_eta"]) >= eta_min)
         & (np.abs(events["Muon_eta"]) < eta_max )
     )
+    # Get W_mt and W_pt for cuts
+    W_mt=W_kinematics(events)[0]
+    W_pt=W_kinematics(events)[1]
+    # cuts
+    cut = ((events['nJet']>0)
+           &(events["MET_pt"]>30)
+           &(events["HLT_PFMET110_PFMHT110_IDTight"])
+           &(W_pt > 40 )
+           & (W_mt <130 )
+           &( W_mt > 30)
+           )
     # Select based on trigger
     mu=events["Muon_pt"]
-    tr_evs=mu[muon_quality_check & eta_split & triggerSingleMuon]
-    evs=mu[muon_quality_check & eta_split]
+    tr_evs=mu[muon_quality_check & eta_split &  triggerSingleMuon & cut]
+    evs=mu[muon_quality_check & eta_split & cut]
     #Fill histograms
     for ev in tr_evs:
         for entry in ev:
@@ -129,12 +158,15 @@ def muon_hists(events,etas,year,reg):
 with uproot.open(input_file) as f:
     evs=Events(f)
     eta1=(muon_hists(evs,[0.0,0.9],year,"1"))
+    print("eta1 complete")
     eta1_mu_num=eta1[0]
     eta1_mu_denom=eta1[1]
     eta2=(muon_hists(evs,[0.9,2.1],year,"2"))
+    print("eta2 complete")
     eta2_mu_num=eta2[0]
     eta2_mu_denom=eta2[1]
     eta3=(muon_hists(evs,[2.1,2.4],year,"3"))
+    print("eta3 complete")
     eta3_mu_num=eta3[0]
     eta3_mu_denom=eta3[1]
 
@@ -151,4 +183,5 @@ eta3_mu_denom.Write()
 root_file.Close()
 
 print("sample complete")
+
 
