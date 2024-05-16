@@ -5,17 +5,17 @@ import numpy as np
 import ROOT
 
 from array import array
-# Sets batch mode so no popup window
+# Sets batch mode so no popup window                                                                                                                                                                                  
 ROOT.gROOT.SetBatch(True)
-# Initialize parser
+# Initialize parser                                                                                                                                                                                                   
 parser = argparse.ArgumentParser()
 parser.add_argument("--era", help="data era", type=str)
-#parser.add_argument("--input")
+#parser.add_argument("--input")                                                                                                                                                                                       
 args = vars(parser.parse_args())
 input_file = "local.root"
 year=args["era"]
 output_file= "out.root"
-# Gets relevant variables from file
+# Gets relevant variables from file                                                                                                                                                                                   
 def Events(f):
     evs=f['Events'].arrays(['HLT_IsoMu27',
                 'HLT_Mu50',
@@ -36,14 +36,15 @@ def Events(f):
                 'Flag_eeBadScFilter',
                 'Flag_ecalBadCalibFilter',
                 'nJet',
-                'HLT_PFMET110_PFMHT110_IDTight',
+                'HLT_PFMETNoMu120_PFMHTNoMu120_IDTight',
                 'MET_phi',
                 'Muon_phi',
                 'MET_pt'
                             ])
+
     return evs
 
-# Defines binning and histograms
+# Defines binning and histograms                                                                                                                                                                                      
 mu_bin_edges=array('d',[0,2,4,6,8,10,12,
                          14,16,18,20,22,
                          24,26,28,30,32,
@@ -51,43 +52,43 @@ mu_bin_edges=array('d',[0,2,4,6,8,10,12,
                          60,70,80,90,100,
                          120,140,160,180,200])
 
-# Defines W variables for cuts
+# Defines W variables for cuts                                                                                                                                                                                        
 def W_kinematics(evs):
-    # px = pt*cos(phi)
+    # px = pt*cos(phi)                                                                                                                                                                                                
     mu_px= evs["Muon_pt"] * np.cos(evs["Muon_phi"])
-    # px = pt*sin(phi)
+    # px = pt*sin(phi)                                                                                                                                                                                                
     mu_py= evs["Muon_pt"] * np.sin(evs["Muon_phi"])
     met_px= evs["MET_pt"] * np.cos(evs["MET_phi"])
     met_py= evs["MET_pt"] * np.sin(evs["MET_phi"])
-    # normalized delta phi
+    # normalized delta phi                                                                                                                                                                                            
     del_phi= np.abs((evs["MET_phi"] % 2*np.pi)-(evs["Muon_phi"] % 2*np.pi))
-    # Transverse mass (squared)
+    # Transverse mass (squared)                                                                                                                                                                                       
     W_mt_2 = (2 * np.abs(evs["Muon_pt"])
               * np.abs(evs["MET_pt"])
-              * (1 - np.cos(del_phi))  # from PDG review on kinematics, eq 38.61
+              * (1 - np.cos(del_phi))  # from PDG review on kinematics, eq 38.61                                                                                                                                      
               )
     W_mt=np.sqrt(W_mt_2)
     W_ptx = mu_px + met_px
     W_pty = mu_py + met_py
-    # pT of W
+    # pT of W                                                                                                                                                                                                         
     W_pt = np.sqrt(W_ptx**2 + W_pty**2)
     return W_mt, W_pt
 
 
 
-# Function for filling the histograms
+# Function for filling the histograms                                                                                                                                                                                 
 
 def muon_hists(events,etas,year,reg):
     mu_num=ROOT.TH1D("eta_"+reg+"_num","Muon events passing trigger eta region "+reg,len(mu_bin_edges)-1,mu_bin_edges)
     mu_denom=ROOT.TH1D("eta_"+reg+"_denom","Total Muon Events eta region "+reg,len(mu_bin_edges)-1,mu_bin_edges)
     eta_min=etas[0]
     eta_max=etas[1]
-    # trigger
+    # trigger                                                                                                                                                                                                         
     triggerSingleMuon = (
             events["HLT_IsoMu27"]
             | events["HLT_Mu50"]
         )
-    # quality requirements for muons
+    # quality requirements for muons                                                                                                                                                                                  
     if year =="2018" or year =="2017":
         muon_quality_check = (
             (events['Flag_goodVertices'])
@@ -122,30 +123,31 @@ def muon_hists(events,etas,year,reg):
             & (np.abs(events["Muon_eta"]) < 2.4)
             & (np.abs(events["Muon_dz"]) < 0.1)
             & (np.abs(events["Muon_dxy"]) < 0.02)
-            & (events["Muon_pfRelIso03_chg"] < 0.25)
-            & (events["Muon_pfRelIso03_all"] < 0.25)
-        )
-    # cut on eta
+            & (events["Muon_pfRelIso03_chg"] < 0.15)
+            & (events["Muon_pfRelIso03_all"] < 0.15)
+)
+ # cut on eta                                                                                                                                                                                                      
     eta_split=(
         (np.abs(events["Muon_eta"]) >= eta_min)
         & (np.abs(events["Muon_eta"]) < eta_max )
     )
-    # Get W_mt and W_pt for cuts
+    # Get W_mt and W_pt for cuts                                                                                                                                                                                      
     W_mt=W_kinematics(events)[0]
     W_pt=W_kinematics(events)[1]
-    # cuts
+    # cuts                                                                                                                                                                                                            
     cut = ((events['nJet']>0)
            &(events["MET_pt"]>30)
-           &(events["HLT_PFMET110_PFMHT110_IDTight"])
+           &(events["HLT_PFMETNoMu120_PFMHTNoMu120_IDTight"])
            &(W_pt > 40 )
            & (W_mt <130 )
            &( W_mt > 30)
            )
-    # Select based on trigger
+    # Select based on trigger                                                                                                                                                                                         
     mu=events["Muon_pt"]
     tr_evs=mu[muon_quality_check & eta_split &  triggerSingleMuon & cut]
     evs=mu[muon_quality_check & eta_split & cut]
-    #Fill histograms
+
+    #Fill histograms                                                                                                                                                                                                  
     for ev in tr_evs:
         for entry in ev:
             mu_num.Fill(entry)
@@ -154,9 +156,16 @@ def muon_hists(events,etas,year,reg):
             mu_denom.Fill(entry)
 
     return mu_num,mu_denom
-
 with uproot.open(input_file) as f:
     evs=Events(f)
+    W_mt_hist=ROOT.TH1D("W_mt_","W mt", 200,0,200)
+    W_pt_hist=ROOT.TH1D("W_pt_","W pt", 200,0,200)
+#    tmp_W_mt=W_kinematics(evs)[0]                                                                                                                                                                                    
+#    tmp_W_pt=W_kinematics(evs)[1]                                                                                                                                                                                    
+ #   for ev in evs:                                                                                                                                                                                                   
+  #      for entry in ev:                                                                                                                                                                                             
+   #         W_mt_hist.Fill(tmp_W_mt)                                                                                                                                                                                 
+    #        W_pt_hist.Fill(tmp_W_pt)                                                                                                                                                                                 
     eta1=(muon_hists(evs,[0.0,0.9],year,"1"))
     print("eta1 complete")
     eta1_mu_num=eta1[0]
@@ -170,7 +179,7 @@ with uproot.open(input_file) as f:
     eta3_mu_num=eta3[0]
     eta3_mu_denom=eta3[1]
 
-# Saves overall efficiency
+# Saves overall efficiency                                                                                                                                                                                            
 root_file = ROOT.TFile(output_file,"RECREATE")
 root_file.cd()
 eta1_mu_num.Write()
@@ -179,9 +188,8 @@ eta2_mu_num.Write()
 eta2_mu_denom.Write()
 eta3_mu_num.Write()
 eta3_mu_denom.Write()
-
+#W_mt_hist.Write()                                                                                                                                                                                                    
+#W_pt_hist.Write()                                                                                                                                                                                                    
 root_file.Close()
-
-print("sample complete")
 
 
